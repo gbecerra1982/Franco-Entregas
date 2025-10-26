@@ -1,0 +1,25 @@
+# Dependencias para el Analizador de Entregas Duplicadas
+# Instalar con: pip install -r requirements.txt
+
+# Procesamiento de datos
+pandas>=2.0.0
+numpy>=1.23.0
+
+# Lectura de archivos Excel (múltiples motores para compatibilidad)
+openpyxl>=3.1.0      # Para archivos .xlsx (moderno) - REQUERIDO
+xlrd>=2.0.0          # Para archivos .xls (antiguo) - REQUERIDO
+xlwt>=1.3.0          # Para escribir archivos .xls
+pyxlsb>=1.0.10       # Para archivos .xlsb (binario)
+
+# Aplicación web interactiva
+streamlit>=1.30.0
+
+# Visualizaciones
+matplotlib>=3.7.0
+
+# Utilidades
+python-dateutil>=2.8.0
+
+# Opcional: Para procesamiento avanzado
+# odfpy>=1.4.1       # Para archivos ODF (LibreOffice)
+# pywin32>=306       # Para COM automation en Windows (Excel)
