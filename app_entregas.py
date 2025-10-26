@@ -10,6 +10,375 @@ st.set_page_config(page_title="Analizador de Entregas Duplicadas", layout="wide"
 st.title("📦 Analizador de Entregas Duplicadas")
 st.markdown("### Detecta entregas duplicadas a la misma dirección y ajusta costos")
 
+# ============================================================================
+# VERIFICACIÓN DE DEPENDENCIAS
+# ============================================================================
+
+def verificar_dependencias():
+    """Verifica que las dependencias necesarias estén instaladas."""
+    dependencias_faltantes = []
+    dependencias_opcionales_faltantes = []
+
+    try:
+        import openpyxl
+    except ImportError:
+        dependencias_faltantes.append("openpyxl")
+
+    try:
+        import xlrd
+    except ImportError:
+        dependencias_faltantes.append("xlrd")
+
+    # Verificar pywin32 (opcional pero muy recomendado en Windows)
+    if os.name == 'nt':  # Solo en Windows
+        try:
+            import win32com.client
+        except ImportError:
+            dependencias_opcionales_faltantes.append("pywin32")
+
+    if dependencias_faltantes:
+        st.error(f"""
+❌ **Dependencias REQUERIDAS faltantes:** {', '.join(dependencias_faltantes)}
+
+**Instalación:**
+```
+pip install {' '.join(dependencias_faltantes)}
+```
+
+La aplicación NO funcionará correctamente sin estas dependencias.
+        """)
+        return False
+
+    if dependencias_opcionales_faltantes:
+        st.warning(f"""
+⚠️ **Dependencia opcional recomendada:** {', '.join(dependencias_opcionales_faltantes)}
+
+Esta dependencia mejora significativamente la conversión de archivos .xls antiguos en Windows.
+
+**Instalación (RECOMENDADO):**
+```
+pip install {' '.join(dependencias_opcionales_faltantes)}
+```
+
+La conversión de archivos .xls será más confiable con esta dependencia instalada.
+        """)
+
+    return True
+
+# Verificar dependencias al inicio
+verificar_dependencias()
+
+# ============================================================================
+# FUNCIONES DE DETECCIÓN Y CONVERSIÓN DE FORMATO EXCEL
+# ============================================================================
+
+def detectar_formato_excel(file_path):
+    """
+    Detecta el formato real del archivo Excel leyendo su firma binaria.
+
+    Returns:
+        str: "xls_antiguo", "xlsx_moderno", o "desconocido"
+    """
+    try:
+        with open(file_path, 'rb') as f:
+            header = f.read(8)
+
+            # XLS antiguo (OLE2/BIFF) - comienza con D0 CF 11 E0
+            if header[:4] == b'\xD0\xCF\x11\xE0':
+                return "xls_antiguo"
+
+            # XLSX moderno (formato ZIP) - comienza con 50 4B 03 04
+            if header[:4] == b'\x50\x4B\x03\x04':
+                return "xlsx_moderno"
+
+            return "desconocido"
+    except Exception as e:
+        st.warning(f"⚠️ No se pudo detectar formato: {str(e)[:100]}")
+        return "desconocido"
+
+def verificar_necesita_conversion(file_path):
+    """
+    Verifica si un archivo necesita conversión de XLS a XLSX.
+
+    Returns:
+        bool: True si necesita conversión, False en caso contrario
+    """
+    formato = detectar_formato_excel(file_path)
+    extension = os.path.splitext(file_path)[1].lower()
+
+    # Si es formato antiguo, necesita conversión
+    if formato == "xls_antiguo":
+        return True
+
+    # Si tiene extensión .xls pero no es formato antiguo, puede ser archivo renombrado
+    if extension == '.xls' and formato != "xls_antiguo":
+        return True
+
+    return False
+
+def convertir_xls_a_xlsx_metodo1(input_path, output_path):
+    """
+    Método 1: Conversión usando pandas con diferentes motores.
+
+    Returns:
+        bool: True si la conversión fue exitosa
+    """
+    try:
+        engines = ['xlrd', 'openpyxl', None]
+
+        for engine in engines:
+            try:
+                if engine == 'xlrd':
+                    # Intentar con xlrd deshabilitando validaciones estrictas
+                    import xlrd
+                    xlrd.Book.logfile = open(os.devnull, 'w')
+                    df = pd.read_excel(input_path, engine=engine)
+                elif engine:
+                    df = pd.read_excel(input_path, engine=engine)
+                else:
+                    df = pd.read_excel(input_path)
+
+                # Guardar como XLSX
+                df.to_excel(output_path, index=False, engine='openpyxl')
+                st.success(f"✅ Conversión exitosa con motor: {engine or 'default'}")
+                return True
+            except Exception as e:
+                # Silenciosamente intentar siguiente método
+                continue
+
+        return False
+    except Exception as e:
+        return False
+
+def convertir_xls_a_xlsx_metodo2(input_path, output_path):
+    """
+    Método 2: Conversión usando xlrd con validación relajada y manejo de errores mejorado.
+
+    Returns:
+        bool: True si la conversión fue exitosa
+    """
+    try:
+        import xlrd
+
+        # Deshabilitar logging de xlrd para evitar spam en consola
+        import sys
+        import io
+        old_stderr = sys.stderr
+        sys.stderr = io.StringIO()
+
+        try:
+            # Intentar abrir con diferentes configuraciones
+            configs = [
+                {'formatting_info': False, 'on_demand': True, 'ignore_workbook_corruption': True},
+                {'formatting_info': False, 'on_demand': False},
+                {'formatting_info': False},
+            ]
+
+            book = None
+            for config in configs:
+                try:
+                    book = xlrd.open_workbook(input_path, **config)
+                    break
+                except:
+                    continue
+
+            if book is None:
+                raise Exception("No se pudo abrir el archivo con xlrd")
+
+            # Leer todas las hojas
+            all_sheets = []
+            for sheet_name in book.sheet_names():
+                try:
+                    sheet = book.sheet_by_name(sheet_name)
+
+                    # Convertir a lista de listas
+                    data = []
+                    for row_idx in range(sheet.nrows):
+                        row = []
+                        for col_idx in range(sheet.ncols):
+                            try:
+                                cell = sheet.cell(row_idx, col_idx)
+                                row.append(cell.value)
+                            except:
+                                row.append('')
+                        data.append(row)
+
+                    df = pd.DataFrame(data)
+                    all_sheets.append((sheet_name, df))
+                except:
+                    continue
+
+            if not all_sheets:
+                raise Exception("No se pudo leer ninguna hoja")
+
+            # Guardar como XLSX
+            with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
+                for sheet_name, df in all_sheets:
+                    df.to_excel(writer, sheet_name=sheet_name, index=False, header=False)
+
+            st.success("✅ Conversión exitosa con xlrd (método alternativo)")
+            return True
+
+        finally:
+            # Restaurar stderr
+            sys.stderr = old_stderr
+
+    except Exception as e:
+        return False
+
+def convertir_xls_a_xlsx_metodo3(input_path, output_path):
+    """
+    Método 3: Conversión usando LibreOffice (si está instalado).
+
+    Returns:
+        bool: True si la conversión fue exitosa
+    """
+    try:
+        import subprocess
+
+        # Buscar LibreOffice en ubicaciones comunes
+        libreoffice_paths = [
+            r"C:\Program Files\LibreOffice\program\soffice.exe",
+            r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
+            "/usr/bin/libreoffice",
+            "/usr/local/bin/libreoffice"
+        ]
+
+        libreoffice_path = None
+        for path in libreoffice_paths:
+            if os.path.exists(path):
+                libreoffice_path = path
+                break
+
+        if not libreoffice_path:
+            return False
+
+        output_dir = os.path.dirname(output_path)
+
+        cmd = [
+            libreoffice_path,
+            "--headless",
+            "--convert-to", "xlsx",
+            "--outdir", output_dir,
+            input_path
+        ]
+
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+
+        # Verificar si se creó el archivo
+        expected_output = os.path.join(output_dir, os.path.basename(input_path).replace('.xls', '.xlsx'))
+
+        if os.path.exists(expected_output):
+            if expected_output != output_path:
+                import shutil
+                shutil.move(expected_output, output_path)
+            st.success("✅ Conversión exitosa con LibreOffice")
+            return True
+
+        return False
+
+    except Exception as e:
+        return False
+
+def convertir_xls_a_xlsx_metodo4(input_path, output_path):
+    """
+    Método 4: Conversión usando win32com (Excel COM automation en Windows).
+    El más confiable en Windows si Excel está instalado.
+
+    Returns:
+        bool: True si la conversión fue exitosa
+    """
+    try:
+        # Solo disponible en Windows
+        if os.name != 'nt':
+            return False
+
+        import win32com.client
+        import pythoncom
+
+        # Inicializar COM
+        pythoncom.CoInitialize()
+
+        try:
+            # Crear instancia de Excel
+            excel = win32com.client.Dispatch("Excel.Application")
+            excel.Visible = False
+            excel.DisplayAlerts = False
+
+            # Convertir a ruta absoluta
+            abs_input = os.path.abspath(input_path)
+            abs_output = os.path.abspath(output_path)
+
+            # Abrir archivo XLS
+            workbook = excel.Workbooks.Open(abs_input)
+
+            # Guardar como XLSX (formato 51)
+            workbook.SaveAs(abs_output, FileFormat=51)
+
+            # Cerrar
+            workbook.Close(SaveChanges=False)
+            excel.Quit()
+
+            st.success("✅ Conversión exitosa con Excel COM (win32com)")
+            return True
+
+        finally:
+            pythoncom.CoUninitialize()
+
+    except Exception as e:
+        return False
+
+def intentar_conversion_automatica(input_path):
+    """
+    Intenta convertir archivo XLS antiguo a XLSX usando múltiples métodos.
+
+    Args:
+        input_path: Ruta del archivo XLS original
+
+    Returns:
+        str: Ruta del archivo XLSX convertido, o None si todos los métodos fallaron
+    """
+    # Crear archivo temporal para output
+    output_path = input_path.replace('.xls', '_temp_convertido.xlsx')
+
+    st.info("🔄 Intentando conversión automática de formato antiguo...")
+
+    # Método 4: Win32com (Excel COM) - El más confiable en Windows
+    if os.name == 'nt':
+        with st.spinner('Método 1: Usando Microsoft Excel (COM)...'):
+            if convertir_xls_a_xlsx_metodo4(input_path, output_path):
+                return output_path
+
+    # Método 1: Pandas con diferentes motores
+    with st.spinner('Método 2: Usando pandas...'):
+        if convertir_xls_a_xlsx_metodo1(input_path, output_path):
+            return output_path
+
+    # Método 2: xlrd con validación relajada
+    with st.spinner('Método 3: Usando xlrd con validación relajada...'):
+        if convertir_xls_a_xlsx_metodo2(input_path, output_path):
+            return output_path
+
+    # Método 3: LibreOffice
+    with st.spinner('Método 4: Intentando con LibreOffice...'):
+        if convertir_xls_a_xlsx_metodo3(input_path, output_path):
+            return output_path
+
+    # Si todos los métodos fallaron
+    st.error("❌ No se pudo convertir el archivo automáticamente")
+    st.warning("""
+    **Recomendación:** El archivo tiene una estructura no estándar.
+
+    **Método más confiable:**
+    1. Abre el archivo en Microsoft Excel
+    2. Selecciona todo (Ctrl+A)
+    3. Copia (Ctrl+C)
+    4. Crea un nuevo libro de Excel
+    5. Pega (Ctrl+V)
+    6. Guarda como .xlsx
+    """)
+    return None
+
 # Función para intentar reparar archivo Excel corrupto usando pyxlsb
 def intentar_reparar_xls(file_path):
     """Intenta leer archivo XLS usando métodos alternativos"""
@@ -41,8 +410,36 @@ def procesar_archivo(file_path):
     """Lee y procesa el archivo Excel con manejo robusto de diferentes formatos"""
     df = None
     error_msg = None
-    
-    # Intentar con diferentes motores en orden de preferencia
+    archivo_convertido = None
+
+    # PASO 1: Verificar si necesita conversión de formato antiguo
+    with st.spinner('🔍 Detectando formato de archivo...'):
+        necesita_conversion = verificar_necesita_conversion(file_path)
+
+    if necesita_conversion:
+        st.info("📋 Detectado formato Excel antiguo (.xls)")
+
+        # Intentar conversión automática
+        archivo_convertido = intentar_conversion_automatica(file_path)
+
+        if archivo_convertido:
+            st.success("✅ Conversión automática completada exitosamente")
+            file_path = archivo_convertido  # Usar archivo convertido para el resto del procesamiento
+        else:
+            # Si la conversión automática falló, mostrar mensaje y lanzar excepción
+            raise Exception(
+                "No se pudo convertir el archivo automáticamente.\n\n"
+                "💡 SOLUCIÓN RECOMENDADA:\n"
+                "1. Abre el archivo en Microsoft Excel\n"
+                "2. Selecciona todo (Ctrl+A)\n"
+                "3. Copia (Ctrl+C)\n"
+                "4. Abre un nuevo libro de Excel\n"
+                "5. Pega (Ctrl+V)\n"
+                "6. Guarda como .xlsx\n\n"
+                "ALTERNATIVA: Usa la herramienta de conversión manual en el menú lateral"
+            )
+
+    # PASO 2: Intentar con diferentes motores en orden de preferencia
     engines = [
         ('openpyxl', 'Intentando con motor OpenPyXL (xlsx)'),
         ('xlrd', 'Intentando con motor xlrd (xls)'),
@@ -179,12 +576,15 @@ st.sidebar.header("⚙️ Configuración")
 
 # ========== HERRAMIENTA DE CONVERSIÓN XLS → XLSX ==========
 st.sidebar.markdown("---")
-st.sidebar.subheader("🔧 Herramienta de Conversión")
-st.sidebar.markdown("**Si tu archivo .xls está corrupto:**")
+st.sidebar.subheader("🔧 Conversión Manual (Opcional)")
+st.sidebar.markdown("**Solo si la conversión automática falla:**")
 
-with st.sidebar.expander("🔄 Convertir XLS → XLSX", expanded=False):
+with st.sidebar.expander("🔄 Convertir XLS → XLSX Manualmente", expanded=False):
     st.markdown("""
-    **Método Manual (Recomendado):**
+    **Nota:** La aplicación ahora convierte archivos .xls automáticamente.
+    Usa esta herramienta solo si la conversión automática falla.
+
+    **Método Manual (Más confiable):**
     1. Abre el archivo en Excel
     2. Archivo → Guardar como
     3. Formato: **Excel Workbook (.xlsx)**
@@ -281,8 +681,10 @@ uploaded_file = st.sidebar.file_uploader(
     help="Sube tu archivo de liquidación de entregas"
 )
 
-# Agregar información de formato
-st.sidebar.info("💡 **Importante:** Si el archivo .xls da error, ábrelo en Excel y guárdalo como .xlsx")
+# Agregar información de formato mejorada
+st.sidebar.info("""💡 **Formatos soportados:**
+- .xlsx (moderno) - Recomendado
+- .xls (antiguo) - Conversión automática incluida""")
 
 # Si hay archivo cargado, procesarlo automáticamente
 if uploaded_file is None:
@@ -301,7 +703,10 @@ else:
         temp_path = tmp_file.name
     
     st.info(f"📁 Procesando archivo: {uploaded_file.name}")
-    
+
+    # Lista para trackear archivos temporales a limpiar
+    archivos_temporales = [temp_path]
+
     try:
         df_original = procesar_archivo(temp_path)
         usar_archivo = True
@@ -310,7 +715,7 @@ else:
     except Exception as e:
         st.error(f"❌ Error al procesar archivo: {e}")
         usar_archivo = False
-        
+
         # Mostrar más información de debug
         with st.expander("🔍 Información de Debug"):
             st.code(f"""
@@ -327,9 +732,17 @@ Soluciones posibles:
 3. Vuelve a intentar cargar el archivo
             """)
     finally:
-        # Limpiar archivo temporal
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
+        # Limpiar todos los archivos temporales (incluidos los convertidos)
+        archivo_convertido_temp = temp_path.replace('.xls', '_temp_convertido.xlsx')
+        if os.path.exists(archivo_convertido_temp):
+            archivos_temporales.append(archivo_convertido_temp)
+
+        for archivo_temp in archivos_temporales:
+            if os.path.exists(archivo_temp):
+                try:
+                    os.remove(archivo_temp)
+                except:
+                    pass  # Ignorar errores de limpieza
 
 # Si tenemos un archivo para procesar
 if usar_archivo:
@@ -501,12 +914,25 @@ Esta aplicación detecta entregas duplicadas basándose en:
 - `Motivo_Ajuste`: Explicación del ajuste
 - `Grupo_Duplicado`: Agrupa entregas a la misma dirección
 
+### 🔄 Conversión Automática de Archivos
+
+Esta aplicación **detecta y convierte automáticamente** archivos Excel antiguos (.xls):
+- ✅ **Detección automática** del formato del archivo por firma binaria
+- ✅ **Conversión transparente** a formato moderno (.xlsx)
+- ✅ **Múltiples métodos** de conversión (pandas, xlrd, LibreOffice)
+- ✅ **Sin intervención manual** requerida en la mayoría de casos
+
+La conversión ocurre automáticamente cuando cargas un archivo .xls antiguo.
+Los archivos temporales se limpian automáticamente después del procesamiento.
+
 ### 🔧 Solución de Problemas
 
-**Si recibes error "Workbook corruption":**
+**Si la conversión automática falla:**
 1. Abre el archivo en Microsoft Excel
 2. Ve a Archivo → Guardar como
 3. Selecciona formato "Excel Workbook (.xlsx)"
 4. Guarda con un nuevo nombre
 5. Vuelve a cargar el archivo nuevo en esta aplicación
+
+**Alternativa:** Usa la herramienta de conversión manual en el menú lateral
 """)

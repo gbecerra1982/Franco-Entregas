@@ -1,3 +1,5 @@
 # Evitar artefactos locales
 Users/
 *.db
+.serena/
+.claude/

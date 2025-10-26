@@ -9,18 +9,120 @@ from datetime import datetime
 import sys
 import os
 import re
+import tempfile
+
+def detectar_formato_excel(file_path):
+    """Detecta el formato del archivo Excel por firma binaria."""
+    try:
+        with open(file_path, 'rb') as f:
+            header = f.read(8)
+            if header[:4] == b'\xD0\xCF\x11\xE0':
+                return "xls_antiguo"
+            if header[:4] == b'\x50\x4B\x03\x04':
+                return "xlsx_moderno"
+            return "desconocido"
+    except:
+        return "desconocido"
+
+def convertir_xls_a_xlsx(input_path):
+    """
+    Convierte archivo XLS a XLSX usando el método más confiable disponible.
+    Returns: Ruta del archivo convertido o None si falla.
+    """
+    output_path = input_path.replace('.xls', '_temp_convertido.xlsx')
+
+    print("🔄 Detectado archivo XLS antiguo, convirtiendo...")
+
+    # Método 1: Win32com (Excel COM) - El más confiable en Windows
+    if os.name == 'nt':
+        try:
+            import win32com.client
+            import pythoncom
+
+            pythoncom.CoInitialize()
+            try:
+                excel = win32com.client.Dispatch("Excel.Application")
+                excel.Visible = False
+                excel.DisplayAlerts = False
+
+                abs_input = os.path.abspath(input_path)
+                abs_output = os.path.abspath(output_path)
+
+                workbook = excel.Workbooks.Open(abs_input)
+                workbook.SaveAs(abs_output, FileFormat=51)
+                workbook.Close(SaveChanges=False)
+                excel.Quit()
+
+                print("✅ Conversión exitosa con Excel COM")
+                return output_path
+            finally:
+                pythoncom.CoUninitialize()
+        except:
+            pass
+
+    # Método 2: Pandas con xlrd
+    try:
+        import xlrd
+        xlrd.Book.logfile = open(os.devnull, 'w')
+        df = pd.read_excel(input_path, engine='xlrd')
+        df.to_excel(output_path, index=False, engine='openpyxl')
+        print("✅ Conversión exitosa con pandas/xlrd")
+        return output_path
+    except:
+        pass
+
+    # Método 3: LibreOffice
+    try:
+        import subprocess
+        libreoffice_paths = [
+            r"C:\Program Files\LibreOffice\program\soffice.exe",
+            r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
+            "/usr/bin/libreoffice",
+            "/usr/local/bin/libreoffice"
+        ]
+
+        libreoffice_path = None
+        for path in libreoffice_paths:
+            if os.path.exists(path):
+                libreoffice_path = path
+                break
+
+        if libreoffice_path:
+            output_dir = os.path.dirname(output_path)
+            cmd = [libreoffice_path, "--headless", "--convert-to", "xlsx",
+                   "--outdir", output_dir, input_path]
+            subprocess.run(cmd, capture_output=True, timeout=60)
+
+            expected = os.path.join(output_dir, os.path.basename(input_path).replace('.xls', '.xlsx'))
+            if os.path.exists(expected):
+                if expected != output_path:
+                    import shutil
+                    shutil.move(expected, output_path)
+                print("✅ Conversión exitosa con LibreOffice")
+                return output_path
+    except:
+        pass
+
+    print("❌ No se pudo convertir automáticamente")
+    print("\n💡 SOLUCIÓN:")
+    print("1. Abre el archivo en Excel")
+    print("2. Ctrl+A → Ctrl+C")
+    print("3. Nuevo libro → Ctrl+V")
+    print("4. Guarda como .xlsx")
+    print("\nO instala: pip install pywin32")
+    return None
 
 def normalizar_direccion(direccion):
     """Normaliza una dirección para comparación"""
     if pd.isna(direccion):
         return ""
-    
+
     direccion = str(direccion).lower().strip()
     # Remover múltiples espacios
     direccion = re.sub(r'\s+', ' ', direccion)
     # Remover puntos y comas
     direccion = direccion.replace(',', '').replace('.', '')
-    
+
     return direccion
 
 def convertir_fecha(fecha_str):
@@ -36,18 +138,40 @@ def convertir_fecha(fecha_str):
             return None
 
 def procesar_archivo(file_path):
-    """Lee y procesa el archivo Excel"""
+    """Lee y procesa el archivo Excel con conversión automática de XLS"""
     print(f"📖 Leyendo archivo: {file_path}")
-    
-    df = pd.read_excel(file_path)
-    
-    # La primera fila contiene los encabezados reales
-    headers = df.iloc[0].tolist()
-    df = df[1:].reset_index(drop=True)
-    df.columns = headers
-    
-    print(f"✅ Archivo cargado: {len(df)} entregas")
-    return df
+
+    archivo_convertido = None
+
+    # Verificar si necesita conversión
+    formato = detectar_formato_excel(file_path)
+    extension = os.path.splitext(file_path)[1].lower()
+
+    if formato == "xls_antiguo" or (extension == '.xls' and formato != "xlsx_moderno"):
+        archivo_convertido = convertir_xls_a_xlsx(file_path)
+        if archivo_convertido:
+            file_path = archivo_convertido
+        else:
+            print("\n❌ No se puede continuar sin conversión exitosa")
+            sys.exit(1)
+
+    try:
+        df = pd.read_excel(file_path)
+
+        # La primera fila contiene los encabezados reales
+        headers = df.iloc[0].tolist()
+        df = df[1:].reset_index(drop=True)
+        df.columns = headers
+
+        print(f"✅ Archivo cargado: {len(df)} entregas")
+        return df
+    finally:
+        # Limpiar archivo temporal convertido
+        if archivo_convertido and os.path.exists(archivo_convertido):
+            try:
+                os.remove(archivo_convertido)
+            except:
+                pass
 
 def analizar_duplicados(df):
     """Analiza y marca entregas duplicadas"""

@@ -70,8 +70,8 @@ Write-Host "📦 Instalando dependencias..." -ForegroundColor Cyan
 Write-Host ""
 
 # Instalar paquetes con conda
-Write-Host "→ Instalando pandas, openpyxl, xlrd..." -ForegroundColor Yellow
-conda install -c conda-forge pandas openpyxl xlrd -y
+Write-Host "→ Instalando pandas, numpy, openpyxl, xlrd, xlwt, pyxlsb..." -ForegroundColor Yellow
+conda install -c conda-forge pandas numpy openpyxl xlrd xlwt pyxlsb python-dateutil -y
 
 Write-Host ""
 Write-Host "→ Instalando streamlit..." -ForegroundColor Yellow
@@ -81,14 +81,22 @@ Write-Host ""
 Write-Host "→ Instalando matplotlib (para gráficos)..." -ForegroundColor Yellow
 conda install -c conda-forge matplotlib -y
 
+Write-Host ""
+Write-Host "→ Instalando pywin32 (conversión avanzada de archivos .xls en Windows)..." -ForegroundColor Yellow
+pip install pywin32
+
 # Verificar instalación
 Write-Host ""
 Write-Host "🔍 Verificando instalación..." -ForegroundColor Cyan
 python -c "import pandas; print(f'✅ pandas {pandas.__version__}')"
+python -c "import numpy; print(f'✅ numpy {numpy.__version__}')"
 python -c "import openpyxl; print(f'✅ openpyxl {openpyxl.__version__}')"
 python -c "import xlrd; print(f'✅ xlrd {xlrd.__version__}')"
+python -c "import xlwt; print(f'✅ xlwt {xlwt.__version__}')"
+python -c "import pyxlsb; print(f'✅ pyxlsb {pyxlsb.__version__}')"
 python -c "import streamlit; print(f'✅ streamlit {streamlit.__version__}')"
 python -c "import matplotlib; print(f'✅ matplotlib {matplotlib.__version__}')"
+python -c "import win32com.client; print('✅ pywin32 (win32com disponible)')"
 
 Write-Host ""
 Write-Host "✨ ¡Instalación completada exitosamente!" -ForegroundColor Green

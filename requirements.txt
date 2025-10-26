@@ -1,25 +1,41 @@
-# Dependencias para el Analizador de Entregas Duplicadas
-# Instalar con: pip install -r requirements.txt
+# ============================================================================
+# ANALIZADOR DE ENTREGAS DUPLICADAS - Dependencias
+# ============================================================================
+# Instalar: pip install -r requirements.txt
+# Windows: pip install -r requirements.txt && pip install pywin32
 
-# Procesamiento de datos
-pandas>=2.0.0
-numpy>=1.23.0
+# ----------------------------------------------------------------------------
+# CORE - Procesamiento de datos
+# ----------------------------------------------------------------------------
+pandas>=2.0.0        # Análisis y manipulación de datos
+numpy>=1.23.0        # Operaciones numéricas
 
-# Lectura de archivos Excel (múltiples motores para compatibilidad)
-openpyxl>=3.1.0      # Para archivos .xlsx (moderno) - REQUERIDO
-xlrd>=2.0.0          # Para archivos .xls (antiguo) - REQUERIDO
-xlwt>=1.3.0          # Para escribir archivos .xls
-pyxlsb>=1.0.10       # Para archivos .xlsb (binario)
+# ----------------------------------------------------------------------------
+# EXCEL - Lectura y escritura de archivos
+# ----------------------------------------------------------------------------
+openpyxl>=3.1.0      # REQUERIDO - Archivos .xlsx (moderno)
+xlrd>=2.0.0          # REQUERIDO - Archivos .xls (antiguo)
+xlwt>=1.3.0          # Escritura de archivos .xls
+pyxlsb>=1.0.10       # Archivos .xlsb (binario)
 
-# Aplicación web interactiva
-streamlit>=1.30.0
+# ----------------------------------------------------------------------------
+# WEB APP - Interfaz de usuario
+# ----------------------------------------------------------------------------
+streamlit>=1.30.0    # Aplicación web interactiva
 
-# Visualizaciones
-matplotlib>=3.7.0
+# ----------------------------------------------------------------------------
+# VISUALIZACIÓN - Gráficos y reportes
+# ----------------------------------------------------------------------------
+matplotlib>=3.7.0    # Gráficos y visualizaciones
 
-# Utilidades
-python-dateutil>=2.8.0
+# ----------------------------------------------------------------------------
+# UTILIDADES
+# ----------------------------------------------------------------------------
+python-dateutil>=2.8.0   # Manejo de fechas
 
-# Opcional: Para procesamiento avanzado
-# odfpy>=1.4.1       # Para archivos ODF (LibreOffice)
-# pywin32>=306       # Para COM automation en Windows (Excel)
+# ----------------------------------------------------------------------------
+# WINDOWS - Conversión avanzada de XLS (RECOMENDADO)
+# ----------------------------------------------------------------------------
+# pywin32>=306       # Excel COM automation - Descomentar o instalar separado
+#                    # Instalación: pip install pywin32
+#                    # Proporciona la conversión XLS más confiable en Windows

@@ -51,55 +51,39 @@ Estadísticas agrupadas por dirección:
 - Costo original vs ajustado
 - Ahorro por dirección
 
-## 🚀 Cómo Usar
+## 🚀 Instalación y Uso Rápido
 
-### Opción 1: Aplicación Web Interactiva (Recomendado)
+### 1️⃣ Instalar Dependencias
+```bash
+# Clonar o descargar el repositorio
+cd Franco-Entregas
 
+# Instalar dependencias básicas
+pip install -r requirements.txt
+
+# [RECOMENDADO EN WINDOWS] Para mejor conversión de archivos .xls:
+pip install pywin32
+```
+
+### 2️⃣ Ejecutar la Aplicación
+
+**Opción A: Interfaz Web (Más Fácil)**
 ```bash
 streamlit run app_entregas.py
 ```
+Abre tu navegador en: http://localhost:8501
 
-Luego abre tu navegador en: http://localhost:8501
+✅ Interfaz visual • ✅ Conversión automática .xls → .xlsx • ✅ Resultados en tiempo real
 
-**Características:**
-- ✅ Interfaz visual intuitiva
-- ✅ Sube archivos directamente
-- ✅ Visualiza duplicados en tiempo real
-- ✅ Descarga resultados con un click
-- ✅ Gráficos y estadísticas
-
-### Opción 2: Script de Línea de Comandos
-
+**Opción B: Línea de Comandos**
 ```bash
-python3 procesar_entregas.py archivo.xls
+python procesar_entregas.py archivo.xlsx
 ```
+✅ Rápido • ✅ Automatizable • ✅ 3 archivos generados automáticamente
 
-o
-
-```bash
-python3 procesar_entregas.py archivo.xlsx
-```
-
-**Características:**
-- ✅ Procesamiento rápido
-- ✅ Automatizable (scripts, cron jobs)
-- ✅ Genera 3 archivos Excel automáticamente
-- ✅ Reporte en consola
-
-## 🔧 Requisitos
-
-```bash
-pip install pandas openpyxl streamlit
-```
-
-Para archivos .xls antiguos, también necesitas LibreOffice:
-```bash
-# Ubuntu/Debian
-sudo apt-get install libreoffice
-
-# MacOS
-brew install --cask libreoffice
-```
+### 📝 Formatos Soportados
+- **.xlsx** (moderno) - Funciona directamente
+- **.xls** (antiguo) - **Conversión automática** (requiere `pywin32` en Windows para mejor resultado)
 
 ## 🧮 Lógica de Detección
 
@@ -181,6 +165,4 @@ Si encuentras algún problema o tienes preguntas:
 - 🔒 Todas las operaciones son de solo lectura sobre el archivo original
 - 💾 Los resultados se guardan en formato Excel (.xlsx) compatible con todas las versiones
 
----
 
-**Desarrollado con ❤️ para optimizar la gestión de entregas**
