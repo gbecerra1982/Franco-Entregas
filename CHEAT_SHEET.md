@@ -52,8 +52,15 @@ source venv/bin/activate
 
 ---
 
-### Ejecutar Aplicación Web
+### 🌐 Ejecutar Aplicación Web
 
+**Método Automatizado (Windows - Recomendado):**
+```powershell
+.\start.ps1
+```
+✅ Activa entorno automáticamente • ✅ Verifica dependencias • ✅ Abre navegador
+
+**Método Manual:**
 ```bash
 streamlit run app_entregas.py
 ```
@@ -62,34 +69,40 @@ Luego abre: http://localhost:8501
 
 ---
 
-### Ejecutar Script de Línea de Comandos
+### 🔄 Procesamiento Masivo (Línea de Comandos)
+
+**Método Automatizado (Windows - Recomendado):**
+
+```powershell
+# Procesar un archivo específico
+.\convertir.ps1 "C:\ruta\a\archivo.xls"
+
+# Procesar todos los archivos del directorio actual
+.\convertir.ps1
+
+# Procesar todos los archivos de un directorio
+.\convertir.ps1 "C:\ruta\directorio"
+
+# Procesamiento recursivo (incluye subdirectorios)
+.\convertir.ps1 -Recursivo
+.\convertir.ps1 "C:\ruta\directorio" -Recursivo
+```
+✅ Activa entorno automáticamente • ✅ Conversión XLS→XLSX • ✅ Resumen consolidado
+
+**Método Manual:**
 
 **Windows:**
 ```powershell
 python procesar_entregas.py "C:\ruta\a\archivo.xls"
+python procesar_entregas.py                       # Procesa directorio actual
+python procesar_entregas.py --recursivo           # Recursivo
 ```
 
 **Linux/Mac:**
 ```bash
 python3 procesar_entregas.py /ruta/a/archivo.xls
-```
-
----
-
-### Procesar Múltiples Archivos
-
-**Windows (PowerShell):**
-```powershell
-Get-ChildItem -Filter *.xls | ForEach-Object {
-    python procesar_entregas.py $_.FullName
-}
-```
-
-**Linux/Mac (Bash):**
-```bash
-for archivo in *.xls; do
-    python3 procesar_entregas.py "$archivo"
-done
+python3 procesar_entregas.py                      # Procesa directorio actual
+python3 procesar_entregas.py --recursivo          # Recursivo
 ```
 
 ---

@@ -30,11 +30,28 @@ pip install pywin32
 ```
 
 ### 3️⃣ Ejecutar
+
+**Opción A: Aplicación Web (Más Fácil) 🌐**
+
 ```bash
+# Forma manual
 streamlit run app_entregas.py
+
+# Con script automatizado (Windows)
+.\start.ps1
 ```
 
-✅ **¡Listo!** Abre tu navegador en http://localhost:8501
+**Opción B: Procesamiento Masivo (Rápido) 🔄**
+
+```bash
+# Forma manual
+python procesar_entregas.py archivo.xlsx
+
+# Con script automatizado (Windows)
+.\convertir.ps1 "archivo.xls"
+```
+
+✅ **¡Listo!** Abre tu navegador en http://localhost:8501 (para opción A)
 
 ---
 
@@ -42,6 +59,13 @@ streamlit run app_entregas.py
 
 ### Ejemplo 1: Aplicación Web (Recomendado)
 
+**Método Automatizado (Windows):**
+```powershell
+.\start.ps1
+```
+✅ Activa entorno automáticamente • ✅ Verifica dependencias • ✅ Abre Streamlit
+
+**Método Manual:**
 ```bash
 streamlit run app_entregas.py
 ```
@@ -54,10 +78,34 @@ streamlit run app_entregas.py
 
 ---
 
-### Ejemplo 2: Línea de Comandos
+### Ejemplo 2: Procesamiento Masivo (Línea de Comandos)
 
+**Método Automatizado (Windows):**
+```powershell
+# Procesar un archivo específico
+.\convertir.ps1 "archivo.xls"
+
+# Procesar todos los archivos del directorio actual
+.\convertir.ps1
+
+# Procesar todos los archivos de un directorio
+.\convertir.ps1 "C:\ruta\directorio"
+
+# Procesamiento recursivo (incluye subdirectorios)
+.\convertir.ps1 -Recursivo
+```
+✅ Activa entorno automáticamente • ✅ Conversión XLS→XLSX • ✅ Resumen consolidado
+
+**Método Manual:**
 ```bash
+# Procesar un archivo
 python procesar_entregas.py archivo.xlsx
+
+# Procesar todos los archivos del directorio actual
+python procesar_entregas.py
+
+# Procesamiento recursivo
+python procesar_entregas.py --recursivo
 ```
 
 Genera automáticamente 3 archivos:

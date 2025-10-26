@@ -67,19 +67,46 @@ pip install pywin32
 
 ### 2️⃣ Ejecutar la Aplicación
 
-**Opción A: Interfaz Web (Más Fácil)**
+**Opción A: Interfaz Web (Más Fácil) 🌐**
+
 ```bash
+# Forma manual
 streamlit run app_entregas.py
+
+# Con script automatizado (Windows)
+.\start.ps1
 ```
 Abre tu navegador en: http://localhost:8501
 
 ✅ Interfaz visual • ✅ Conversión automática .xls → .xlsx • ✅ Resultados en tiempo real
 
-**Opción B: Línea de Comandos**
+**Opción B: Procesamiento Masivo (Línea de Comandos) 🔄**
+
 ```bash
+# Forma manual
 python procesar_entregas.py archivo.xlsx
+
+# Con script automatizado (Windows)
+.\convertir.ps1 "archivo.xls"
+.\convertir.ps1                          # Procesa todos los XLS/XLSX del directorio
+.\convertir.ps1 "C:\ruta\directorio"     # Procesa todos en un directorio
+.\convertir.ps1 -Recursivo               # Procesa recursivamente subdirectorios
 ```
-✅ Rápido • ✅ Automatizable • ✅ 3 archivos generados automáticamente
+✅ Rápido • ✅ Procesamiento masivo • ✅ 3 archivos generados automáticamente
+
+### 🎯 Scripts de Automatización (Windows)
+
+**`start.ps1`** - Inicia la aplicación web Streamlit
+- Verifica entorno conda
+- Activa automáticamente el entorno
+- Lanza Streamlit
+- Manejo de errores integrado
+
+**`convertir.ps1`** - Procesamiento masivo de archivos
+- Procesa un archivo, múltiples archivos o directorios completos
+- Conversión automática XLS → XLSX
+- Soporte para procesamiento recursivo
+- Generación de reportes consolidados
 
 ### 📝 Formatos Soportados
 - **.xlsx** (moderno) - Funciona directamente
