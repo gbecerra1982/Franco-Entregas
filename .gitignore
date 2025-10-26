@@ -1,0 +1,3 @@
+# Evitar artefactos locales
+Users/
+*.db
